@@ -9,10 +9,6 @@ class SolrPerformanceTesting
     @companies ||= open(File.dirname(__FILE__) + '/../data/search_queries.txt', "r:UTF-8").lines.map { |line| line.strip }
   end
 
-  def random_companies(max=10000)
-    companies.take(max).shuffle
-  end
-
   def companies_skip_and_take(skip_cnt, take_cnt)
     companies.drop(skip_cnt).take(take_cnt)
   end
@@ -46,9 +42,7 @@ class SolrPerformanceTesting
           threads = []
           thread_cnt.to_i.times do |n|
             threads << Thread.new do
-              #sleep(0.1)
               q_time, result_cnt, slowest = companies_search(n, max_count, url)
-
               q_times["#{name}_Qtime_#{n}"] = q_time
               result_counts["#{name}_hits_#{n}"] = result_cnt
               slowest_counts["#{name}_maxTime_#{n}"] = slowest
@@ -68,7 +62,7 @@ class SolrPerformanceTesting
   end
 
   def search(url, search_text="*:*")
-    puts search_text
+    #puts search_text
     solr = RSolr.connect :url => url
     response = solr.get 'select', :params => {q: search_text, rows:1, fl:'company_id'}
     return response['responseHeader']['QTime'].to_i, response['response']['numFound'].to_i

@@ -10,12 +10,7 @@ describe SolrPerformanceTesting do
   end
 
   it 'should benchmark' do
-    comp.search_companies(100, 10)
-  end
-
-  it 'should get random companies' do
-    companies = comp.random_companies
-    puts companies.take(10)
+    comp.search_companies(500, 5)
   end
 
   it 'should read lines' do
