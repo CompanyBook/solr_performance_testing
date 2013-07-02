@@ -13,8 +13,7 @@ task :solr_bench, [:comp_cnt, :thread_cnt, :servers] do |t, args|
       :comp_cnt => 10,
       :thread_cnt => 1,
       :servers => {
-          '29' => 'http://datanode29.companybook.no:8360/solr/gb_companies_20130418',
-          '30' => 'http://datanode30.companybook.no:8360/solr/gb_companies_20130418'
+          '29' => 'http://datanode29.companybook.no:8360/solr/gb_companies_20130602_stem_1'
       }
   )
   p args

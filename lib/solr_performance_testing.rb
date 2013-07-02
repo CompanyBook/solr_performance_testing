@@ -30,15 +30,19 @@ class SolrPerformanceTesting
   end
 
   def search_companies(max_count=1, thread_cnt=1, serves = {
-      'n29' => 'http://datanode29.companybook.no:8360/solr/gb_companies_20130418',
+      'n29' => 'http://datanode29.companybook.no:8360/solr/gb_companies_20130602_stem_1',
   })
 
-    puts "will search #{max_count} companies"
+    info = []
+    info << "servers   : #{serves}"
+    info << "query cnt : #{max_count}"
+    info << "thread cnt: #{thread_cnt}"
 
     result_counts = Hash.new { |k, v| k[v] = 0 }
     q_times = Hash.new { |k, v| k[v] = 0 }
     slowest_counts = Hash.new { |k, v| k[v] = [0, ''] }
 
+    total_time = Time.now
     Benchmark.bm(1) do |x|
       serves.each do |name, url|
         x.report(name) do
@@ -54,12 +58,37 @@ class SolrPerformanceTesting
           threads.each { |t| t.join }
         end
       end
+      used_ms = ((Time.new - total_time) * 1000).to_i
 
-      result_counts.sort_by { |name, value| name }.each { |k, v| puts "#{k} - #{v}" }
-      q_times.sort_by { |name, value| name }.each { |k, v| puts "#{k} - #{v}" }
-      slowest_counts.sort_by { |name, value| name }.each { |k, v| puts "#{k} - #{v}" }
-      puts "Total Qtime used:" + q_times.values.inject { |sum, v| sum + v }.to_s
-      puts "Total Worst used:" + slowest_counts.values.map { |v| v[0] }.inject { |sum, v| sum + v }.to_s
+      debug = []
+      result_counts.sort_by { |name, value| name }.each { |k, v| debug << "#{k} - #{v}" }
+      q_times.sort_by { |name, value| name }.each { |k, v| debug << "#{k} - #{v}" }
+      slowest_counts.sort_by { |name, value| name }.each { |k, v| debug << "#{k} - #{v}" }
+
+      out = []
+      out << "Total Qtime used            : " + q_times.values.inject { |sum, v| sum + v }.to_s
+      out << "Total hit count             : " + result_counts.values.map.inject { |sum, v| sum + v }.to_s
+      out << "Sum Worst thread Qtime used : " + slowest_counts.values.map { |v| v[0] }.inject { |sum, v| sum + v }.to_s
+      out << "Worst thread Qtime used     : " + slowest_counts.values.max.to_s
+      out << "Time used to run            : " + used_ms.to_s
+
+      file_name = "perf_#{Time.now.strftime('%Y%m%d%H%S')}.txt"
+      File.open(file_name, 'w') do |f|
+        info.each do |msg|
+          puts msg
+          f.puts msg + "\n"
+        end
+
+        debug.each do |msg|
+          f.puts msg + "\n"
+        end
+        f.puts "\n"
+
+        out.each do |msg|
+          puts msg
+          f.puts msg + "\n"
+        end
+      end
     end
   end
 
@@ -69,17 +98,17 @@ class SolrPerformanceTesting
 
     params = {
         :q => search_text,
-        #:facet => 'true',
+        :facet => 'true',
         :utf8 => '?',
         :location => '150-154-GB',
-        'shards.qt' => 'dismax_flat2',
+        'shards.qt' => 'dismax_flat',
         'facet.limit' => '3',
         'f.location.facet.limit' => '10',
         :hl => 'true',
         :version => '2',
         :fl => 'name,company_id,revenue,org_num,city,geolocation,geolocation_source,country_iso,industry_code,nace_2,naics_4,naics_6,employees_count,structure,profit,location,region,sub_region',
         :bq => 'country_iso:GB^500+company_id:GB0000000288451024^9999',
-        'facet.query' => ['employees_count:[1+TO+10]', 'employees_count:[11+TO+50]', 'employees_count:[51+TO+200]', 'employees_count:[201+TO+500]', 'employees_count:[501+TO+1000]', 'employees_count:[1001+TO+5000]', 'employees_count:[5001+TO+10000]', 'employees_count:[10001+TO+10000000]', 'revenue:[0.02+TO+500000]', 'revenue:[0.05+TO+500000]', 'revenue:[1+TO+500000]', 'revenue:[10+TO+500000]', 'revenue:[80+TO+500000]', 'revenue:[200+TO+500000]', 'revenue:[500+TO+500000]', 'profit:[-2100+TO+-0.0001]', 'profit:[0.02+TO+500000]', 'profit:[0.05+TO+500000]', 'profit:[1+TO+500000]', 'profit:[10+TO+500000]', 'profit:[80+TO+500000]', 'profit:[200+TO+500000]', 'profit:[500+TO+500000]'],
+        'facet.query' => ['employees_count:[1  TO 10]', 'employees_count:[11 TO 50]', 'employees_count:[51 TO 200]', 'employees_count:[201 TO 500]', 'employees_count:[501 TO 1000]', 'employees_count:[1001 TO 5000]', 'employees_count:[5001 TO 10000]', 'employees_count:[10001 TO 10000000]', 'revenue:[0.02 TO 500000]', 'revenue:[0.05 TO 500000]', 'revenue:[1 TO 500000]', 'revenue:[10 TO 500000]', 'revenue:[80 TO 500000]', 'revenue:[200 TO 500000]', 'revenue:[500 TO 500000]', 'profit:[-2100 TO -0.0001]', 'profit:[0.02 TO 500000]', 'profit:[0.05 TO 500000]', 'profit:[1 TO 500000]', 'profit:[10 TO 500000]', 'profit:[80 TO 500000]', 'profit:[200 TO 500000]', 'profit:[500 TO 500000]'],
         :bf => 'log(max(1,boost_revenue))^200',
         :action => 'show',
         'facet.field' => ['location', 'region', 'naics_6'],
@@ -100,7 +129,9 @@ class SolrPerformanceTesting
         :pf => 'title^10 meta_description^10 keywords^10 name^10',
         :qf => 'body_1^0.05 body^0.1 body_2^0.01 chairman structure^0.1 keywords^0.3 ext_link_texts^0.5 city^4 key_people ceo title^0.3 meta_description^0.3 name^10 board_member',
         :fq => ['location:150-154-GB', '-active:1', '-region:039', 'naics_6:551112 OR name:"holding"'],
+        :shards => (1..5).map { |it| "localhost:8360/solr/gb_companies_20130602_stem_#{it}" }.join(',')
     }
+
 
     #response = solr.get 'select', :params => {q: search_text, rows:1, fl:'company_id', facet: true, 'shards.qt' => 'dismax_flat'}
     response = solr.get 'select', :params => params
