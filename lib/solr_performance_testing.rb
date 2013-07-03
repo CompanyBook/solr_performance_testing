@@ -72,7 +72,7 @@ class SolrPerformanceTesting
       out << "Worst thread Qtime used     : " + slowest_counts.values.max.to_s
       out << "Time used to run            : " + used_ms.to_s
 
-      file_name = "perf_#{Time.now.strftime('%Y%m%d%H%S')}.txt"
+      file_name = "perf_#{max_count}_#{thread_cnt}_#{Time.now.strftime('%Y%m%d%H%S')}.txt"
       File.open(file_name, 'w') do |f|
         info.each do |msg|
           puts msg
